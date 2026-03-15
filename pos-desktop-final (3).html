@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0f">
+<title>CellPOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #111118;
+  --bg3: #1a1a24;
+  --bg4: #222230;
+  --card: #16161f;
+  --border: #2a2a3a;
+  --border2: #333345;
+  --accent: #00d4ff;
+  --accent2: #7c6af7;
+  --green: #00ff88;
+  --yellow: #ffd166;
+  --red: #ff4757;
+  --orange: #ff9f43;
+  --text: #f0f0ff;
+  --text2: #a0a0c0;
+  --text3: #606080;
+  --font: 'Outfit', sans-serif;
+  --display: 'Syne', sans-serif;
+  --r: 12px;
+  --r-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* TOP NAV - Desktop */
+.bottom-nav { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 20px; flex-shrink: 0; align-items: center; height: 52px; gap: 4px; }
+.bn-btn { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; background: none; color: var(--text3); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; border-radius: var(--r-sm); }
+.bn-btn .icon { font-size: 16px; }
+.bn-btn.active { color: var(--accent); background: var(--bg3); }
+.bn-btn:hover:not(.active) { background: var(--bg3); color: var(--text); }
+.nav-brand { font-family: var(--display); font-size: 18px; font-weight: 800; color: var(--accent); margin-right: 16px; }
+.nav-brand span { color: var(--text); }
+.nav-spacer { flex: 1; }
+.nav-time { font-size: 12px; color: var(--text3); font-family: monospace; }
+
+/* PAGES */
+.page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.page.active { display: flex; }
+
+/* HEADER */
+.ph { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ph-title { font-family: var(--display); font-size: 17px; font-weight: 700; }
+.ph-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.ph-actions { display: flex; gap: 6px; }
+
+/* BUTTONS */
+.btn-p { padding: 8px 14px; border-radius: var(--r-sm); border: none; background: var(--accent); color: #000; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-s { padding: 8px 14px; border-radius: var(--r-sm); border: 1px solid var(--border2); background: none; color: var(--text2); font-family: var(--font); font-size: 13px; cursor: pointer; }
+.btn-danger { padding: 8px 14px; border-radius: var(--r-sm); border: 1px solid var(--red); background: none; color: var(--red); font-family: var(--font); font-size: 13px; cursor: pointer; }
+
+/* ===================== POS ===================== */
+#page-pos { background: var(--bg); }
+
+.pos-search-area { padding: 10px 14px 6px; flex-shrink: 0; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.search-box { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1.5px solid var(--border2); border-radius: 10px; padding: 10px 14px; }
+.search-box:focus-within { border-color: var(--accent); }
+.search-box input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font); font-size: 15px; }
+.search-box input::placeholder { color: var(--text3); }
+
+.cat-scroll { display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-chip { flex-shrink: 0; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 500; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.cat-chip.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+/* Product list (mobile: vertical list not grid) */
+.prod-list { flex: 1; overflow-y: auto; padding: 8px 14px; }
+.prod-list::-webkit-scrollbar { display: none; }
+
+.prod-row { display: flex; align-items: center; gap: 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: all .15s; active: opacity .8; }
+.prod-row:active { opacity: .7; transform: scale(.98); }
+.prod-row.out { opacity: .4; pointer-events: none; }
+.prod-row.low { border-color: var(--orange); }
+.prod-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.prod-info { flex: 1; min-width: 0; }
+.prod-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prod-code { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: monospace; }
+.prod-right { text-align: right; flex-shrink: 0; }
+.prod-price { font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--green); }
+.prod-stock-info { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.prod-stock-info.low { color: var(--orange); }
+.prod-stock-info.out { color: var(--red); }
+.prod-add-btn { width: 34px; height: 34px; border-radius: 8px; background: var(--accent2); border: none; color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-family: var(--font); }
+
+/* TICKET FLOTANTE - hidden on desktop */
+.ticket-fab { display: none; }
+.fab-btn { display: none; }
+.fab-count { display: none !important; }
+.fab-total { display: none !important; }
+
+/* DESKTOP POS LAYOUT */
+#page-pos { flex-direction: row !important; }
+.pos-products-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--border); }
+.pos-ticket-col { width: 400px; display: flex; flex-direction: column; background: var(--bg2); flex-shrink: 0; overflow-y: auto; }
+
+/* ===================== TICKET PAGE ===================== */
+#page-ticket { background: var(--bg); display: flex !important; flex-direction: column; flex: 1; overflow: hidden; }
+.ticket-header-info { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg2); }
+.t-num { font-family: monospace; font-size: 12px; color: var(--text3); }
+.t-items-list { flex: 1; overflow-y: auto; padding: 10px 14px; min-height: 100px; }
+.t-items-list::-webkit-scrollbar { display: none; }
+.t-item { display: flex; align-items: center; gap: 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 6px; }
+.t-item-info { flex: 1; min-width: 0; }
+.t-item-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-item-unit { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.qty-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.qty-val { font-size: 15px; font-weight: 700; min-width: 22px; text-align: center; font-family: monospace; }
+.t-item-total { font-size: 13px; font-weight: 700; color: var(--green); font-family: monospace; min-width: 70px; text-align: right; flex-shrink: 0; }
+.btn-rm { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+.ticket-empty { text-align: center; padding: 50px 20px; color: var(--text3); }
+.ticket-empty .te-icon { font-size: 44px; margin-bottom: 12px; }
+
+/* Bottom ticket panel */
+.ticket-bottom { flex-shrink: 0; background: var(--bg2); border-top: 1px solid var(--border); padding: 10px 14px; overflow-y: auto; max-height: 65vh; }
+.cliente-sel { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-family: var(--font); font-size: 13px; padding: 8px 10px; outline: none; margin-bottom: 8px; }
+.desc-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.desc-label { font-size: 12px; color: var(--text2); flex-shrink: 0; }
+.desc-inp { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-family: var(--font); font-size: 14px; padding: 7px 10px; outline: none; }
+.desc-sel { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text2); font-family: var(--font); font-size: 13px; padding: 7px 8px; outline: none; }
+.totales { background: var(--bg3); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 10px; }
+.tot-r { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: var(--text2); }
+.tot-r.big { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border2); }
+.tot-r.big .tl { font-size: 16px; font-weight: 700; color: var(--text); }
+.tot-r.big .tv { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--green); }
+.tv { font-family: monospace; font-weight: 600; }
+.tv.red { color: var(--red); }
+
+/* Medios de pago */
+.mp-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+.mp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 8px; }
+.mp-btn { padding: 8px 4px; border-radius: var(--r-sm); border: 1.5px solid var(--border); background: none; color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; font-family: var(--font); text-align: center; transition: all .15s; }
+.mp-btn.sel { background: rgba(124,106,247,.15); border-color: var(--accent2); color: var(--accent2); }
+.recibido-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.recibido-label { font-size: 12px; color: var(--text2); flex-shrink: 0; }
+.recibido-inp { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-family: monospace; font-size: 15px; padding: 8px 10px; outline: none; }
+.vuelto-disp { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; padding: 4px 0; margin-bottom: 8px; }
+.vuelto-disp .vl { color: var(--yellow); font-family: monospace; }
+
+.btn-cobrar { width: 100%; padding: 16px; border-radius: var(--r); border: none; background: linear-gradient(135deg, var(--green), #00cc6a); color: #000; font-family: var(--display); font-size: 17px; font-weight: 800; cursor: pointer; letter-spacing: .5px; transition: all .15s; }
+.btn-cobrar:active { transform: scale(.98); }
+.btn-cobrar:disabled { opacity: .4; }
+.btn-row2 { display: flex; gap: 8px; margin-top: 6px; }
+.btn-fac { flex: 1; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--border2); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); }
+.btn-anular { flex: 1; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--border2); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); }
+
+/* ===================== STOCK ===================== */
+#page-stock { }
+.stock-filters { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg2); }
+.stock-search-box { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px 12px; }
+.stock-search-box input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font); font-size: 14px; }
+.stock-search-box input::placeholder { color: var(--text3); }
+.stock-list { flex: 1; overflow-y: auto; padding: 14px 20px; }
+.stock-list::-webkit-scrollbar { display: none; }
+.stock-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; }
+.si-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+.si-name { font-size: 14px; font-weight: 600; flex: 1; margin-right: 8px; }
+.si-cat { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.si-bottom { display: flex; align-items: center; justify-content: space-between; }
+.si-prices { font-size: 12px; color: var(--text3); }
+.si-prices span { color: var(--green); font-weight: 600; font-size: 14px; }
+.si-stock { font-size: 13px; font-weight: 700; font-family: monospace; }
+.si-stock.ok { color: var(--green); }
+.si-stock.low { color: var(--orange); }
+.si-stock.out { color: var(--red); }
+.si-code { font-size: 10px; color: var(--text3); font-family: monospace; margin-bottom: 4px; }
+.si-actions { display: flex; gap: 6px; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+.si-btn { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--text2); font-size: 12px; cursor: pointer; font-family: var(--font); }
+.si-btn:active { opacity: .7; }
+
+/* ===================== VENTAS ===================== */
+.v-list { flex: 1; overflow-y: auto; padding: 14px 20px; max-width: 900px; }
+.v-list::-webkit-scrollbar { display: none; }
+.v-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; }
+.v-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.v-num { font-family: monospace; font-size: 12px; color: var(--text3); }
+.v-total { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--green); }
+.v-info { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
+.v-meta { font-size: 11px; color: var(--text3); }
+.v-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.v-mp { background: var(--bg3); padding: 3px 10px; border-radius: 99px; font-size: 11px; color: var(--text2); }
+.badge-anulada { background: rgba(255,71,87,.15); color: var(--red); padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.v-anular { background: none; border: 1px solid var(--border2); color: var(--text3); padding: 3px 10px; border-radius: 99px; font-size: 11px; cursor: pointer; font-family: var(--font); }
+
+/* ===================== DASHBOARD ===================== */
+#page-dashboard { overflow-y: auto; padding: 20px; gap: 14px; max-width: 1200px; margin: 0 auto; }
+#page-dashboard::-webkit-scrollbar { display: none; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 12px; }
+.kpi-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+.kpi-val { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.kpi-val.green { color: var(--green); }
+.kpi-val.blue { color: var(--accent); }
+.kpi-val.purple { color: var(--accent2); }
+.kpi-val.yellow { color: var(--yellow); }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.dash-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; } .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dash-card-title { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+.dp-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.dp-item:last-child { border-bottom: none; }
+.dp-rank { font-family: monospace; font-size: 12px; color: var(--text3); min-width: 18px; }
+.dp-name { flex: 1; font-size: 13px; }
+.dp-qty { font-family: monospace; font-size: 12px; color: var(--green); }
+.da-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.da-item:last-child { border-bottom: none; }
+.da-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.da-name { flex: 1; font-size: 13px; }
+.da-stock { font-family: monospace; font-size: 12px; }
+.dash-greet { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.dash-date { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+/* ===================== MODALES ===================== */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 500; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; animation: modalIn .2s ease; } .modal.wide { max-width: 640px; }
+@keyframes modalIn { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
+.modal-title { font-family: var(--display); font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.modal-close { background: none; border: none; color: var(--text3); font-size: 22px; cursor: pointer; }
+.fg { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.fg label { font-size: 12px; color: var(--text2); font-weight: 500; }
+.fg input, .fg select, .fg textarea { background: var(--bg3); border: 1.5px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-family: var(--font); font-size: 15px; padding: 10px 12px; outline: none; width: 100%; }
+.fg input:focus, .fg select:focus { border-color: var(--accent2); }
+.fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ma { display: flex; gap: 8px; margin-top: 16px; }
+.btn-sv { flex: 2; padding: 13px; border-radius: var(--r-sm); border: none; background: var(--accent2); color: #fff; font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-cx { flex: 1; padding: 13px; border-radius: var(--r-sm); border: 1px solid var(--border2); background: none; color: var(--text2); font-family: var(--font); font-size: 15px; cursor: pointer; }
+
+/* SUCCESS */
+.success-modal { text-align: center; padding: 10px 0; }
+.s-icon { font-size: 54px; margin-bottom: 10px; }
+.s-title { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--green); margin-bottom: 4px; }
+.s-sub { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+.s-detail { background: var(--bg3); border-radius: var(--r-sm); padding: 12px; text-align: left; margin-bottom: 14px; }
+.s-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+.s-row:last-child { margin-bottom: 0; }
+.s-label { color: var(--text2); }
+.s-val { font-family: monospace; font-weight: 600; }
+.s-row.total .s-val { color: var(--green); font-size: 17px; }
+.s-btns { display: flex; gap: 8px; }
+.s-btn1 { flex: 1; padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border2); background: none; color: var(--text2); font-size: 13px; cursor: pointer; font-family: var(--font); }
+.s-btn2 { flex: 2; padding: 12px; border-radius: var(--r-sm); border: none; background: var(--accent2); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font); }
+
+/* IVA DISPLAY */
+.iva-box { background: var(--bg3); border-radius: var(--r-sm); padding: 12px; margin: 12px 0; }
+.iva-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.iva-row:last-child { margin-bottom: 0; }
+
+/* TOAST */
+.toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--border2); border-radius: 99px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 9999; white-space: nowrap; box-shadow: 0 4px 24px rgba(0,0,0,.4); animation: toastIn .25s ease; }
+.toast.ok { border-color: var(--green); }
+.toast.err { border-color: var(--red); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* PRINT */
+@media print {
+  body > *:not(.pzone) { display: none !important; }
+  .modal-overlay { display: none !important; }
+  .pzone { display: block !important; position: fixed; inset: 0; background: white; padding: 20px; z-index: 99999; }
+  .pzone * { visibility: visible !important; color: #111 !important; }
+}
+.pzone { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== POS PAGE ===================== -->
+<div class="page active" id="page-pos">
+  <div class="pos-products-col">
+  <div class="ph">
+    <div>
+      <div class="ph-title" style="font-family:var(--display);color:var(--accent)">Cell<span style="color:var(--text)">POS</span></div>
+      <div class="ph-sub" id="turno-hora">Turno activo</div>
+    </div>
+
+  </div>
+
+  <div class="pos-search-area">
+    <div class="search-box">
+      <span style="color:var(--text3)">🔍</span>
+      <input type="text" id="pos-search" placeholder="Buscar por nombre o código..." oninput="renderProdList()" onkeydown="handleSearchKey(event)" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="cat-scroll" id="cat-scroll">
+    <button class="cat-chip active" onclick="setCat('todos',this)">Todos</button>
+  </div>
+
+  <div class="prod-list" id="prod-list">
+    <div style="text-align:center;padding:50px 20px;color:var(--text3)">
+      <div style="font-size:40px;margin-bottom:10px">📦</div>
+      <div>Andá a Stock para agregar productos</div>
+    </div>
+  </div>
+
+  <!-- FAB ticket -->
+  <div class="ticket-fab">
+    <button class="fab-btn" onclick="showPage('ticket')">🛒</button>
+    <div class="fab-count" id="fab-count">0</div>
+    <div class="fab-total" id="fab-total">₲ 0</div>
+  </div>
+  </div><!-- end pos-products-col -->
+  <div class="pos-ticket-col" id="pos-ticket-col">
+  <div class="ticket-header-info">
+    <div>
+      <div style="font-family:var(--display);font-size:16px;font-weight:700">🛒 Ticket de venta</div>
+      <div class="t-num" id="t-num">#0001</div>
+    </div>
+    <button class="btn-s" style="font-size:12px;padding:6px 12px" onclick="nuevoTicket()">🗑 Limpiar</button>
+  </div>
+
+  <div class="t-items-list" id="t-items-list">
+    <div class="ticket-empty">
+      <div class="te-icon">🛒</div>
+      <div style="font-size:14px">Ticket vacío</div>
+      <div style="font-size:12px;margin-top:6px;color:var(--text3)">Volvé a Venta para agregar productos</div>
+    </div>
+  </div>
+
+  <div class="ticket-bottom">
+    <select class="cliente-sel" id="t-cliente">
+      <option value="">— Consumidor final —</option>
+    </select>
+    <div class="desc-row">
+      <span class="desc-label">Descuento</span>
+      <input type="number" class="desc-inp" id="desc-val" placeholder="0" min="0" oninput="calcTotales()">
+      <select class="desc-sel" id="desc-tipo" onchange="calcTotales()">
+        <option value="gs">₲</option>
+        <option value="pct">%</option>
+      </select>
+    </div>
+    <div class="totales">
+      <div class="tot-r"><span>Subtotal</span><span class="tv" id="tot-sub">₲ 0</span></div>
+      <div class="tot-r" id="desc-row-disp" style="display:none"><span style="color:var(--red)">Descuento</span><span class="tv red" id="tot-desc-disp">-₲ 0</span></div>
+      <div class="tot-r big"><span class="tl">TOTAL</span><span class="tv" id="tot-total" style="font-family:var(--display);font-size:20px;color:var(--green)">₲ 0</span></div>
+    </div>
+    <div class="mp-title">Medio de pago</div>
+    <div class="mp-grid">
+      <button class="mp-btn sel" onclick="setMP('efectivo',this)">💵 Efectivo</button>
+      <button class="mp-btn" onclick="setMP('tarjeta',this)">💳 Tarjeta</button>
+      <button class="mp-btn" onclick="setMP('transferencia',this)">📲 Transf.</button>
+      <button class="mp-btn" onclick="setMP('credito',this)">📒 Cta.Cte.</button>
+      <button class="mp-btn" onclick="setMP('cheque',this)">📄 Cheque</button>
+      <button class="mp-btn" onclick="setMP('otro',this)">⚡ Otro</button>
+    </div>
+    <div id="efec-area">
+      <div class="recibido-row">
+        <span class="recibido-label">Recibido ₲</span>
+        <input type="number" class="recibido-inp" id="recibido" placeholder="0" oninput="calcVuelto()" inputmode="numeric">
+      </div>
+      <div class="vuelto-disp" id="vuelto-disp" style="display:none">
+        <span style="color:var(--text2)">Vuelto</span>
+        <span class="vl" id="vuelto-val">₲ 0</span>
+      </div>
+    </div>
+    <button class="btn-cobrar" id="btn-cobrar" onclick="cobrar()" disabled>COBRAR</button>
+    <div class="btn-row2">
+      <button class="btn-fac" onclick="abrirFactura()">🧾 Facturar</button>
+      <button class="btn-anular" onclick="anularTicket()">✕ Anular</button>
+    </div>
+  </div>
+</div>
+
+  </div><!-- end pos-ticket-col -->
+</div><!-- end page-pos extra -->
+
+<!-- ===================== STOCK PAGE ===================== -->
+<div class="page" id="page-stock">
+  <div class="ph">
+    <div><div class="ph-title">📦 Stock</div><div class="ph-sub" id="stock-count">0 productos</div></div>
+    <div class="ph-actions">
+      <button class="btn-s" onclick="imprimirStock()" style="font-size:12px;padding:7px 10px">🖨</button>
+      <button class="btn-p" onclick="abrirNuevoProd()">+ Nuevo</button>
+    </div>
+  </div>
+  <div class="stock-filters">
+    <div class="stock-search-box">
+      <span style="color:var(--text3)">🔍</span>
+      <input type="text" id="stock-search" placeholder="Buscar producto..." oninput="renderStock()">
+    </div>
+  </div>
+  <div class="stock-list" id="stock-list"></div>
+</div>
+
+<!-- ===================== VENTAS PAGE ===================== -->
+<div class="page" id="page-ventas">
+  <div class="ph">
+    <div><div class="ph-title">📋 Ventas</div><div class="ph-sub" id="ventas-hoy-info">Hoy: ₲ 0</div></div>
+    <button class="btn-s" style="font-size:12px;padding:7px 12px" onclick="cerrarTurno()">⏹ Turno</button>
+  </div>
+  <div class="stock-filters">
+    <div class="stock-search-box">
+      <span style="color:var(--text3)">🔍</span>
+      <input type="text" id="ventas-search" placeholder="Buscar venta..." oninput="renderVentas()">
+    </div>
+  </div>
+  <div class="v-list" id="v-list"></div>
+</div>
+
+<!-- ===================== DASHBOARD PAGE ===================== -->
+<div class="page" id="page-dashboard">
+  <div>
+    <div class="dash-greet" id="dash-greet">Buenos días 👋</div>
+    <div class="dash-date" id="dash-date"></div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">Ventas hoy</div><div class="kpi-val green" id="kpi-ventas">₲ 0</div><div class="kpi-sub" id="kpi-trans">0 transacciones</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ganancia</div><div class="kpi-val yellow" id="kpi-gan">₲ 0</div><div class="kpi-sub">estimada hoy</div></div>
+    <div class="kpi-card"><div class="kpi-label">Productos</div><div class="kpi-val purple" id="kpi-prods">0</div><div class="kpi-sub" id="kpi-alertas">0 alertas</div></div>
+    <div class="kpi-card"><div class="kpi-label">Tickets</div><div class="kpi-val blue" id="kpi-tickets">0</div><div class="kpi-sub">emitidos hoy</div></div>
+  </div>
+  <div class="dash-card">
+    <div class="dash-card-title">🏆 Más vendidos hoy</div>
+    <div id="top-prods"></div>
+  </div>
+  <div class="dash-card">
+    <div class="dash-card-title">⚠️ Alertas de stock</div>
+    <div id="alertas-list"></div>
+  </div>
+</div>
+
+<!-- TOP NAV -->
+<nav class="bottom-nav">
+  <div class="nav-brand">Cell<span>POS</span></div>
+  <button class="bn-btn active" onclick="showPage('pos')" id="bn-pos"><span class="icon">🛒</span>Venta</button>
+  <button class="bn-btn" onclick="showPage('stock')" id="bn-stock"><span class="icon">📦</span>Stock</button>
+  <button class="bn-btn" onclick="showPage('ventas')" id="bn-ventas"><span class="icon">📋</span>Ventas</button>
+  <button class="bn-btn" onclick="showPage('dashboard')" id="bn-dashboard"><span class="icon">📊</span>Panel</button>
+  <div class="nav-spacer"></div>
+  <div class="nav-time" id="turno-hora2">--:--</div>
+  <button class="bn-btn" onclick="openModal('modal-config')" style="margin-left:8px"><span class="icon">⚙️</span>Config</button>
+</nav>
+
+<!-- ===================== MODALES ===================== -->
+
+<!-- Producto -->
+<div class="modal-overlay" id="modal-prod">
+  <div class="modal">
+    <div class="modal-title"><span id="mprod-title">Nuevo producto</span><button class="modal-close" onclick="closeModal('modal-prod')">✕</button></div>
+    <div class="fg-row">
+      <div class="fg"><label>Código</label><input type="text" id="p-cod" placeholder="Ej: CEL001"></div>
+      <div class="fg"><label>Categoría</label>
+        <select id="p-cat">
+          <option>Celulares</option><option>Accesorios</option><option>Fundas</option>
+          <option>Cargadores</option><option>Auriculares</option><option>Pantallas</option>
+          <option>Baterias</option><option>Otros</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Nombre del producto</label><input type="text" id="p-nom" placeholder="Ej: iPhone 15 128GB Negro"></div>
+    <div class="fg-row">
+      <div class="fg"><label>P. Compra (₲)</label><input type="number" id="p-pc" placeholder="0" inputmode="numeric"></div>
+      <div class="fg"><label>P. Venta (₲)</label><input type="number" id="p-pv" placeholder="0" inputmode="numeric"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Stock actual</label><input type="number" id="p-st" placeholder="0" min="0" inputmode="numeric"></div>
+      <div class="fg"><label>Stock mínimo</label><input type="number" id="p-stm" placeholder="2" min="0" inputmode="numeric"></div>
+    </div>
+    <div class="ma">
+      <button class="btn-cx" onclick="closeModal('modal-prod')">Cancelar</button>
+      <button class="btn-sv" onclick="guardarProd()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cobro OK -->
+<div class="modal-overlay" id="modal-ok">
+  <div class="modal">
+    <div class="success-modal">
+      <div class="s-icon">✅</div>
+      <div class="s-title">¡Venta realizada!</div>
+      <div class="s-sub" id="ok-sub">Ticket registrado</div>
+      <div class="s-detail" id="ok-detail"></div>
+      <div class="s-btns">
+        <button class="s-btn1" onclick="closeModal('modal-ok');verComprobante(lastVenta?.id)">👁 Ver comprobante</button>
+        <button class="s-btn2" onclick="closeModal('modal-ok');nuevoTicket();showPage('pos')">Nueva venta →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Factura -->
+<div class="modal-overlay" id="modal-fac">
+  <div class="modal">
+    <div class="modal-title"><span>🧾 Factura</span><button class="modal-close" onclick="closeModal('modal-fac')">✕</button></div>
+    <div class="fg"><label>Razón social</label><input type="text" id="f-razon" placeholder="Nombre o razón social"></div>
+    <div class="fg-row">
+      <div class="fg"><label>RUC / CI</label><input type="text" id="f-ruc" placeholder="1234567-8"></div>
+      <div class="fg"><label>Fecha</label><input type="date" id="f-fecha"></div>
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">DATOS DEL TIMBRADO (config. automática)</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span style="color:var(--text2)">Timbrado N°</span>
+        <span id="f-timb-disp" style="font-family:monospace;font-weight:600;color:var(--accent)">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span style="color:var(--text2)">Próxima factura</span>
+        <span id="f-nro-disp" style="font-family:monospace;font-weight:700;color:var(--green)">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:var(--text2)">Vencimiento</span>
+        <span id="f-venc-disp" style="font-family:monospace;font-weight:600">—</span>
+      </div>
+    </div>
+    <input type="hidden" id="f-timb">
+    <input type="hidden" id="f-venc">
+    <input type="hidden" id="f-est">
+    <input type="hidden" id="f-punto">
+    <div class="iva-box">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Desglose IVA (10%)</div>
+      <div class="iva-row"><span style="color:var(--text2)">Total operación</span><span id="f-total-d" style="font-family:monospace;font-weight:600">₲ 0</span></div>
+      <div class="iva-row"><span style="color:var(--text2)">IVA incluido (10%)</span><span id="f-iva-d" style="font-family:monospace;color:var(--orange)">₲ 0</span></div>
+      <div class="iva-row"><span style="color:var(--text2)">Monto gravado</span><span id="f-grav-d" style="font-family:monospace;color:var(--green)">₲ 0</span></div>
+    </div>
+    <div class="ma">
+      <button class="btn-cx" onclick="closeModal('modal-fac')">Cancelar</button>
+      <button class="btn-sv" onclick="emitirFactura()">Emitir factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- Config -->
+<div class="modal-overlay" id="modal-config">
+  <div class="modal">
+    <div class="modal-title"><span>⚙️ Configuración</span><button class="modal-close" onclick="closeModal('modal-config')">✕</button></div>
+    <div class="fg"><label>Nombre del negocio</label><input type="text" id="c-neg" placeholder="CellStore Paraguay"></div>
+    <div class="fg"><label>RUC</label><input type="text" id="c-ruc" placeholder="80012345-1"></div>
+    <div class="fg"><label>Dirección</label><input type="text" id="c-dir" placeholder="Av. Principal 1234"></div>
+    <div class="fg"><label>Teléfono</label><input type="text" id="c-tel" placeholder="+595 21 000000"></div>
+    <div style="margin:14px 0 8px;font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.07em">🧾 Datos de timbrado</div>
+    <div class="fg"><label>Número de timbrado</label><input type="text" id="c-timb-num" placeholder="Ej: 12345678"></div>
+    <div class="fg-row">
+      <div class="fg"><label>Establecimiento</label><input type="text" id="c-timb-est" placeholder="001"></div>
+      <div class="fg"><label>Punto expedición</label><input type="text" id="c-timb-punto" placeholder="001"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Nro. siguiente factura</label><input type="number" id="c-timb-actual" placeholder="1" inputmode="numeric"><div id="timb-preview" style="font-size:11px;color:var(--accent);margin-top:4px;font-family:monospace"></div><div style="font-size:11px;color:var(--text3);margin-top:3px">⚠️ Cambiá solo al iniciar un talonario nuevo</div></div>
+      <div class="fg"><label>Vencimiento timbrado</label><input type="date" id="c-timb-venc"></div>
+    </div>
+    <div class="ma">
+      <button class="btn-cx" onclick="closeModal('modal-config')">Cancelar</button>
+      <button class="btn-sv" onclick="guardarConfig()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Ver Comprobante -->
+<div class="modal-overlay" id="modal-ver-comp">
+  <div class="modal">
+    <div class="modal-title"><span id="ver-comp-title">Comprobante</span><button class="modal-close" onclick="closeModal('modal-ver-comp')">✕</button></div>
+    <div id="ver-comp-contenido" style="background:white;color:#111;border-radius:8px;padding:16px;font-family:Arial,sans-serif;font-size:12px;margin-bottom:14px;overflow-x:auto"></div>
+    <div class="ma">
+      <button class="btn-cx" onclick="closeModal('modal-ver-comp')">Cerrar</button>
+      <button class="btn-sv" onclick="generarPDF()" style="background:#e74c3c">📄 PDF</button>
+      <button class="btn-sv" onclick="compartirWhatsApp()" style="background:#25D366">💬 WhatsApp</button>
+      <button class="btn-sv" onclick="imprimirComprobante()" id="btn-imprimir-comp">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cierre turno -->
+<div class="modal-overlay" id="modal-cierre">
+  <div class="modal">
+    <div class="modal-title"><span>⏹ Cierre de turno</span><button class="modal-close" onclick="closeModal('modal-cierre')">✕</button></div>
+    <div id="cierre-content"></div>
+    <div class="ma">
+      <button class="btn-cx" onclick="closeModal('modal-cierre')">Cerrar</button>
+      <button class="btn-sv" onclick="imprimirCierre()">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<div class="pzone" id="pzone"></div>
+
+<script>
+// ===================== DATA =====================
+let DB = {
+  productos: [], ventas: [],
+  config: { negocio: 'CellPOS', ruc: '', dir: '', tel: '' },
+  timbrado: { numero: '', est: '001', punto: '001', actual: 1, vencimiento: '' },
+  ticketNum: 1
+};
+function save() { try { localStorage.setItem('cellpos_v2', JSON.stringify(DB)); } catch(e){} }
+function load() { try { const d = localStorage.getItem('cellpos_v2'); if(d) DB = JSON.parse(d); } catch(e){} }
+function fmt(n) { return '₲ ' + Math.round(n||0).toLocaleString('es-PY'); }
+function fmtN(n) { return Math.round(n||0).toLocaleString('es-PY'); }
+function today() { return new Date().toISOString().slice(0,10); }
+function nowStr() { return new Date().toLocaleString('es-PY'); }
+
+// TOAST
+function toast(msg, type='ok') {
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='ok'?'✅ ':'❌ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+// NAV
+function showPage(id) {
+  if(id==='ticket') id='pos'; // On desktop, ticket is always visible in POS
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bn-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const bn = document.getElementById('bn-'+id);
+  if(bn) bn.classList.add('active');
+  if(id==='stock') renderStock();
+  if(id==='ventas') renderVentas();
+  if(id==='dashboard') renderDashboard();
+  if(id==='pos') { renderProdList(); renderTicket(); }
+}
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if(id==='modal-config') loadConfig();
+  if(id==='modal-fac') loadFacModal();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+// CAT COLORS
+const CAT_C = {
+  'Celulares':'#00d4ff','Accesorios':'#7c6af7','Fundas':'#00ff88',
+  'Cargadores':'#ffd166','Auriculares':'#ff9f43','Pantallas':'#ff6b9d',
+  'Baterias':'#ff4757','Otros':'#a0a0c0'
+};
+
+// ===================== PRODUCTOS =====================
+let editProdId = null;
+let catActual = 'todos';
+
+function abrirNuevoProd() {
+  editProdId = null;
+  document.getElementById('mprod-title').textContent = 'Nuevo producto';
+  ['p-cod','p-nom','p-pc','p-pv','p-st','p-stm'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-cat').value = 'Celulares';
+  openModal('modal-prod');
+}
+
+function guardarProd() {
+  const nom = document.getElementById('p-nom').value.trim();
+  if(!nom) { toast('Ingresá el nombre', 'err'); return; }
+  const p = {
+    id: editProdId || Date.now(),
+    codigo: document.getElementById('p-cod').value.trim() || 'P'+Date.now(),
+    nombre: nom,
+    categoria: document.getElementById('p-cat').value,
+    pcompra: parseFloat(document.getElementById('p-pc').value)||0,
+    pventa: parseFloat(document.getElementById('p-pv').value)||0,
+    stock: parseInt(document.getElementById('p-st').value)||0,
+    stockMin: parseInt(document.getElementById('p-stm').value)||2,
+  };
+  if(editProdId) {
+    const idx = DB.productos.findIndex(x=>x.id===editProdId);
+    if(idx>=0) DB.productos[idx]=p;
+  } else { DB.productos.push(p); }
+  save(); closeModal('modal-prod');
+  editProdId = null;
+  renderStock(); renderProdList(); updateCats();
+  toast(editProdId ? 'Actualizado' : 'Producto agregado');
+}
+
+function editarProd(id) {
+  const p = DB.productos.find(x=>x.id===id);
+  if(!p) return;
+  editProdId = id;
+  document.getElementById('mprod-title').textContent = 'Editar producto';
+  document.getElementById('p-cod').value = p.codigo;
+  document.getElementById('p-nom').value = p.nombre;
+  document.getElementById('p-cat').value = p.categoria;
+  document.getElementById('p-pc').value = p.pcompra;
+  document.getElementById('p-pv').value = p.pventa;
+  document.getElementById('p-st').value = p.stock;
+  document.getElementById('p-stm').value = p.stockMin;
+  openModal('modal-prod');
+}
+
+function eliminarProd(id) {
+  if(!confirm('¿Eliminar producto?')) return;
+  DB.productos = DB.productos.filter(x=>x.id!==id);
+  save(); renderStock(); renderProdList(); updateCats();
+  toast('Eliminado');
+}
+
+function updateCats() {
+  const cats = [...new Set(DB.productos.map(p=>p.categoria))];
+  const scroll = document.getElementById('cat-scroll');
+  scroll.innerHTML = '<button class="cat-chip active" onclick="setCat(\'todos\',this)">Todos</button>' +
+    cats.map(c=>`<button class="cat-chip" onclick="setCat('${c}',this)">${c}</button>`).join('');
+}
+
+function setCat(cat, btn) {
+  catActual = cat;
+  document.querySelectorAll('.cat-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProdList();
+}
+
+// ===================== POS RENDER =====================
+function renderProdList() {
+  const q = (document.getElementById('pos-search')?.value||'').toLowerCase();
+  let prods = DB.productos.filter(p=>{
+    const mQ = !q || p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q);
+    const mC = catActual==='todos' || p.categoria===catActual;
+    return mQ && mC;
+  });
+  const el = document.getElementById('prod-list');
+  if(!prods.length) {
+    el.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--text3)"><div style="font-size:40px;margin-bottom:10px">🔍</div><div>${q?'Sin resultados para "'+q+'"':'No hay productos. Andá a Stock.'}</div></div>`;
+    return;
+  }
+  el.innerHTML = prods.map(p=>{
+    const color = CAT_C[p.categoria]||'#a0a0c0';
+    const isOut = p.stock===0;
+    const isLow = p.stock>0 && p.stock<=p.stockMin;
+    return `<div class="prod-row ${isOut?'out':''} ${isLow?'low':''}" onclick="addToTicket(${p.id})">
+      <div class="prod-dot" style="background:${color}"></div>
+      <div class="prod-info">
+        <div class="prod-name">${p.nombre}</div>
+        <div class="prod-code">${p.codigo}</div>
+      </div>
+      <div class="prod-right">
+        <div class="prod-price">${fmt(p.pventa)}</div>
+        <div class="prod-stock-info ${isOut?'out':isLow?'low':''}">${isOut?'Sin stock':isLow?'Stock bajo: '+p.stock:'Stock: '+p.stock}</div>
+      </div>
+      <button class="prod-add-btn" onclick="event.stopPropagation();addToTicket(${p.id})">+</button>
+    </div>`;
+  }).join('');
+}
+
+function handleSearchKey(e) {
+  if(e.key==='Enter') {
+    const q = e.target.value.trim().toLowerCase();
+    const found = DB.productos.find(p=>p.codigo.toLowerCase()===q);
+    if(found) { addToTicket(found.id); e.target.value=''; renderProdList(); }
+  }
+}
+
+// ===================== TICKET =====================
+let ticketItems = [];
+let mpActual = 'efectivo';
+let lastVenta = null;
+
+function addToTicket(id) {
+  const p = DB.productos.find(x=>x.id===id);
+  if(!p||p.stock===0) return;
+  const ex = ticketItems.find(i=>i.id===id);
+  if(ex) {
+    if(ex.qty>=p.stock){toast('Sin más stock','err');return;}
+    ex.qty++;
+  } else {
+    ticketItems.push({id:p.id,nombre:p.nombre,pventa:p.pventa,pcompra:p.pcompra,qty:1});
+  }
+  updateFAB(); calcTotales();
+  toast(p.nombre+' agregado');
+}
+
+function updateFAB() {
+  const count = ticketItems.reduce((a,i)=>a+i.qty,0);
+  const total = getTotal();
+  const fc = document.getElementById('fab-count');
+  const ft = document.getElementById('fab-total');
+  if(count>0) {
+    fc.style.display='flex'; fc.textContent=count;
+    ft.style.display='block'; ft.textContent=fmt(total);
+  } else {
+    fc.style.display='none'; ft.style.display='none';
+  }
+}
+
+function cambiarQty(id, delta) {
+  const item = ticketItems.find(i=>i.id===id);
+  if(!item) return;
+  const p = DB.productos.find(x=>x.id===id);
+  item.qty = Math.max(0, Math.min(item.qty+delta, p?p.stock:999));
+  if(item.qty===0) ticketItems = ticketItems.filter(i=>i.id!==id);
+  renderTicket(); updateFAB();
+}
+
+function quitarItem(id) {
+  ticketItems = ticketItems.filter(i=>i.id!==id);
+  renderTicket(); updateFAB();
+}
+
+function renderTicket() {
+  const el = document.getElementById('t-items-list');
+  if(!ticketItems.length) {
+    el.innerHTML='<div class="ticket-empty"><div class="te-icon">🛒</div><div style="font-size:14px">Ticket vacío</div><div style="font-size:12px;margin-top:6px;color:var(--text3)">Volvé a Venta para agregar</div></div>';
+    document.getElementById('btn-cobrar').disabled=true;
+    calcTotales(); return;
+  }
+  el.innerHTML = ticketItems.map(i=>`
+    <div class="t-item">
+      <div class="t-item-info">
+        <div class="t-item-name">${i.nombre}</div>
+        <div class="t-item-unit">${fmt(i.pventa)} c/u</div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="cambiarQty(${i.id},-1)">−</button>
+        <span class="qty-val">${i.qty}</span>
+        <button class="qty-btn" onclick="cambiarQty(${i.id},1)">+</button>
+      </div>
+      <div class="t-item-total">${fmt(i.pventa*i.qty)}</div>
+      <button class="btn-rm" onclick="quitarItem(${i.id})">✕</button>
+    </div>`).join('');
+  document.getElementById('btn-cobrar').disabled=false;
+  calcTotales();
+}
+
+function getTotal() {
+  const sub = ticketItems.reduce((a,i)=>a+i.pventa*i.qty,0);
+  const dv = parseFloat(document.getElementById('desc-val')?.value)||0;
+  const dt = document.getElementById('desc-tipo')?.value||'gs';
+  const dm = dt==='pct'?(sub*dv/100):dv;
+  return Math.max(0,sub-dm);
+}
+
+function calcTotales() {
+  const sub = ticketItems.reduce((a,i)=>a+i.pventa*i.qty,0);
+  const dv = parseFloat(document.getElementById('desc-val')?.value)||0;
+  const dt = document.getElementById('desc-tipo')?.value||'gs';
+  const dm = dt==='pct'?(sub*dv/100):dv;
+  const total = Math.max(0,sub-dm);
+  document.getElementById('tot-sub').textContent=fmt(sub);
+  document.getElementById('tot-total').textContent=fmt(total);
+  const dr = document.getElementById('desc-row-disp');
+  if(dm>0){dr.style.display='flex';document.getElementById('tot-desc-disp').textContent='-'+fmt(dm);}
+  else{dr.style.display='none';}
+  calcVuelto();
+  updateFAB();
+}
+
+function calcVuelto() {
+  if(mpActual!=='efectivo'){document.getElementById('vuelto-disp').style.display='none';return;}
+  const total = getTotal();
+  const rec = parseFloat(document.getElementById('recibido').value)||0;
+  const vuelto = rec-total;
+  const vd = document.getElementById('vuelto-disp');
+  if(rec>0){
+    vd.style.display='flex';
+    const vv = document.getElementById('vuelto-val');
+    vv.textContent=fmt(Math.max(0,vuelto));
+    vv.style.color = vuelto<0?'var(--red)':'var(--yellow)';
+  } else { vd.style.display='none'; }
+}
+
+function setMP(mp, btn) {
+  mpActual=mp;
+  document.querySelectorAll('.mp-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const ea = document.getElementById('efec-area');
+  ea.style.display = mp==='efectivo'?'block':'none';
+  if(mp!=='efectivo') document.getElementById('vuelto-disp').style.display='none';
+}
+
+function cobrar() {
+  if(!ticketItems.length) return;
+  const total = getTotal();
+  const venta = {
+    id: Date.now(),
+    num: String(DB.ticketNum).padStart(4,'0'),
+    fecha: new Date().toISOString(),
+    items: [...ticketItems],
+    total,
+    descuento: parseFloat(document.getElementById('desc-val')?.value)||0,
+    descTipo: document.getElementById('desc-tipo')?.value||'gs',
+    mp: mpActual,
+    anulada: false,
+    tipo: 'ticket'
+  };
+  venta.items.forEach(item=>{
+    const p=DB.productos.find(x=>x.id===item.id);
+    if(p) p.stock=Math.max(0,p.stock-item.qty);
+  });
+  DB.ventas.push(venta);
+  DB.ticketNum++;
+  lastVenta=venta;
+  save();
+  const rec = parseFloat(document.getElementById('recibido').value)||0;
+  const vuelto = mpActual==='efectivo'?Math.max(0,rec-total):0;
+  document.getElementById('ok-sub').textContent=`Ticket #${venta.num} · ${nowStr()}`;
+  document.getElementById('ok-detail').innerHTML=`
+    <div class="s-row"><span class="s-label">Items</span><span class="s-val">${venta.items.length} producto(s)</span></div>
+    <div class="s-row"><span class="s-label">Medio de pago</span><span class="s-val">${mpActual}</span></div>
+    ${mpActual==='efectivo'&&rec>0?`<div class="s-row"><span class="s-label">Recibido</span><span class="s-val">${fmt(rec)}</span></div><div class="s-row"><span class="s-label">Vuelto</span><span class="s-val" style="color:var(--yellow)">${fmt(vuelto)}</span></div>`:''}
+    <div class="s-row total"><span class="s-label">TOTAL</span><span class="s-val">${fmt(total)}</span></div>`;
+  openModal('modal-ok');
+}
+
+function nuevoTicket() {
+  ticketItems=[];
+  document.getElementById('desc-val').value='';
+  document.getElementById('recibido').value='';
+  document.getElementById('t-cliente').value='';
+  document.getElementById('vuelto-disp').style.display='none';
+  renderTicket(); updateFAB();
+}
+
+function anularTicket() {
+  if(!ticketItems.length) return;
+  if(!confirm('¿Anular ticket?')) return;
+  nuevoTicket(); toast('Ticket anulado');
+}
+
+// ===================== FACTURA =====================
+function abrirFactura() {
+  if(!ticketItems.length){toast('Agregá productos primero','err');return;}
+  openModal('modal-fac');
+}
+
+function loadFacModal() {
+  document.getElementById('f-fecha').value=today();
+  const total=getTotal();
+  const iva=Math.round(total*10/110);
+  document.getElementById('f-total-d').textContent=fmt(total);
+  document.getElementById('f-iva-d').textContent=fmt(iva);
+  document.getElementById('f-grav-d').textContent=fmt(total-iva);
+  // Auto-fill hidden fields from config
+  const t = DB.timbrado;
+  document.getElementById("f-timb").value=t.numero||"";
+  document.getElementById("f-est").value=t.est||"001";
+  document.getElementById("f-punto").value=t.punto||"001";
+  document.getElementById("f-venc").value=t.vencimiento||"";
+  // Show display fields
+  const nroPreview = `${t.est||'001'}-${t.punto||'001'}-${String(t.actual||1).padStart(7,'0')}`;
+  document.getElementById('f-timb-disp').textContent = t.numero||'⚠️ Sin configurar';
+  document.getElementById('f-nro-disp').textContent = nroPreview;
+  const vd = document.getElementById('f-venc-disp');
+  if(t.vencimiento) {
+    const vence = new Date(t.vencimiento);
+    const hoy = new Date();
+    vd.textContent = t.vencimiento;
+    vd.style.color = vence < hoy ? 'var(--red)' : 'var(--green)';
+    if(vence < hoy) vd.textContent += ' ⚠️ VENCIDO';
+  } else {
+    vd.textContent = '—';
+  }
+  if(!t.numero) toast('Configurá el timbrado en ⚙️ Config primero', 'err');
+}
+
+function emitirFactura() {
+  const razon = document.getElementById('f-razon').value.trim();
+  if(!razon){toast('Ingresá la razón social','err');return;}
+  const total=getTotal();
+  const iva=Math.round(total*10/110);
+  // Actualizar timbrado solo si se cambió en el modal de factura
+  if(document.getElementById('f-timb').value) DB.timbrado.numero=document.getElementById('f-timb').value;
+  if(document.getElementById('f-venc').value) DB.timbrado.vencimiento=document.getElementById('f-venc').value;
+  const est = DB.timbrado.est||'001';
+  const punto = DB.timbrado.punto||'001';
+  const nro=`${est}-${punto}-${String(DB.timbrado.actual||1).padStart(7,'0')}`;
+  DB.timbrado.actual=(DB.timbrado.actual||1)+1;
+  const venta={
+    id:Date.now(), num:String(DB.ticketNum).padStart(4,'0'),
+    fecha:new Date().toISOString(), items:[...ticketItems], total,
+    descuento:parseFloat(document.getElementById('desc-val')?.value)||0,
+    descTipo:document.getElementById('desc-tipo')?.value||'gs',
+    mp:mpActual, anulada:false, tipo:'factura',
+    factura:{razon, ruc:document.getElementById('f-ruc').value, timbrado:document.getElementById('f-timb').value, nro, fecha:document.getElementById('f-fecha').value, iva, gravado:total-iva}
+  };
+  venta.items.forEach(item=>{
+    const p=DB.productos.find(x=>x.id===item.id);
+    if(p) p.stock=Math.max(0,p.stock-item.qty);
+  });
+  DB.ventas.push(venta);
+  DB.ticketNum++;
+  lastVenta=venta;
+  save();
+  closeModal('modal-fac');
+  imprimirFactura(venta);
+  nuevoTicket();
+  toast('Factura emitida');
+}
+
+function imprimirFactura(v) {
+  const f=v.factura;
+  const rows=v.items.map(i=>`<tr><td>${i.nombre}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">₲ ${fmtN(i.pventa)}</td><td style="text-align:right">₲ ${fmtN(i.pventa*i.qty)}</td></tr>`).join('');
+  document.getElementById('pzone').innerHTML=`<div style="font-family:Arial;font-size:12px;color:#111;background:white;padding:20px">
+    <div style="display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px">
+      <div><div style="font-size:16px;font-weight:800">${DB.config.negocio}</div><div style="font-size:11px;color:#555">RUC: ${DB.config.ruc||'—'}</div><div style="font-size:11px;color:#555">Timbrado: ${f.timbrado}</div></div>
+      <div style="text-align:right"><div style="font-size:15px;font-weight:700">FACTURA</div><div style="font-size:13px;font-weight:700">${f.nro}</div><div style="font-size:11px;color:#555">Fecha: ${f.fecha}</div></div>
+    </div>
+    <div style="margin-bottom:10px;padding:8px;background:#f9f9f9;border-radius:4px">
+      <div style="font-size:10px;color:#888">SEÑOR(ES):</div><div style="font-weight:700">${f.razon}</div>
+      ${f.ruc?`<div style="font-size:11px;color:#555">RUC/CI: ${f.ruc}</div>`:''}
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#111;color:#fff"><th style="padding:6px;text-align:left">Descripción</th><th style="padding:6px">Cant</th><th style="padding:6px;text-align:right">P.Unit</th><th style="padding:6px;text-align:right">Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="border-top:1px solid #111;margin-top:8px;padding-top:8px;text-align:right">
+      <div style="font-size:11px;color:#555">IVA incluido (10%): ₲ ${fmtN(f.iva)}</div>
+      <div style="font-size:11px;color:#555">Monto gravado: ₲ ${fmtN(f.gravado)}</div>
+      <div style="font-size:17px;font-weight:800;margin-top:4px">TOTAL: ₲ ${fmtN(v.total)}</div>
+    </div>
+  </div>`;
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>document.getElementById('pzone').innerHTML='', 3000);
+  }, 200);
+}
+
+function imprimirTicket() {
+  if(!lastVenta) return;
+  const v=lastVenta;
+  const rows=v.items.map(i=>`<tr><td>${i.nombre} x${i.qty}</td><td style="text-align:right">₲ ${fmtN(i.pventa*i.qty)}</td></tr>`).join('');
+  document.getElementById('pzone').innerHTML=`<div style="font-family:'Courier New',monospace;font-size:12px;max-width:280px;margin:0 auto;color:#111;background:white;padding:14px">
+    <div style="text-align:center;border-bottom:1px dashed #111;padding-bottom:6px;margin-bottom:8px">
+      <div style="font-size:15px;font-weight:800">${DB.config.negocio}</div>
+      ${DB.config.dir?`<div style="font-size:10px">${DB.config.dir}</div>`:''}
+    </div>
+    <div style="font-size:10px;margin-bottom:6px">#${v.num} · ${new Date(v.fecha).toLocaleString('es-PY')}</div>
+    <table style="width:100%;font-size:11px">${rows}</table>
+    <div style="border-top:1px dashed #111;margin-top:6px;padding-top:6px;text-align:right">
+      <div style="font-size:10px">Pago: ${v.mp}</div>
+      <div style="font-size:15px;font-weight:800">TOTAL: ₲ ${fmtN(v.total)}</div>
+    </div>
+    <div style="text-align:center;font-size:9px;color:#888;margin-top:6px">¡Gracias por su compra!</div>
+  </div>`;
+  window.print();
+  setTimeout(()=>document.getElementById('pzone').innerHTML='',1000);
+}
+
+
+
+let comprobantePrintHTML = '';
+
+function verComprobante(id) {
+  const v = DB.ventas.find(x=>x.id===id);
+  if(!v) return;
+  lastVenta = v;
+  if(v.tipo==='factura') {
+    document.getElementById('ver-comp-title').textContent = '🧾 Factura #' + v.num;
+    comprobantePrintHTML = buildFacturaHTML(v);
+  } else {
+    document.getElementById('ver-comp-title').textContent = '🎫 Ticket #' + v.num;
+    comprobantePrintHTML = buildTicketHTML(v);
+  }
+  document.getElementById('ver-comp-contenido').innerHTML = comprobantePrintHTML;
+  openModal('modal-ver-comp');
+}
+
+
+
+function generarPDF() {
+  if(!lastVenta) return;
+  const v = lastVenta;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const negocio = DB.config.negocio || 'CellPOS';
+  let y = 15;
+  const left = 15;
+  const right = 195;
+  const mid = 105;
+
+  // Header
+  doc.setFillColor(17, 17, 24);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text(negocio, left, 14);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 160, 192);
+  if(DB.config.ruc) doc.text('RUC: ' + DB.config.ruc, left, 20);
+  if(DB.config.dir) doc.text(DB.config.dir, left, 25);
+  if(DB.config.tel) doc.text(DB.config.tel, right - doc.getTextWidth(DB.config.tel), 20);
+
+  y = 40;
+
+  if(v.tipo === 'factura' && v.factura) {
+    const f = v.factura;
+
+    // Tipo documento
+    doc.setFillColor(0, 212, 255);
+    doc.rect(left, y - 6, 80, 10, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FACTURA', left + 4, y);
+
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('N°: ' + f.nro, right - doc.getTextWidth('N°: ' + f.nro), y - 2);
+    doc.text('Fecha: ' + f.fecha, right - doc.getTextWidth('Fecha: ' + f.fecha), y + 4);
+    doc.text('Timbrado: ' + (f.timbrado||'—'), right - doc.getTextWidth('Timbrado: ' + (f.timbrado||'—')), y + 10);
+    doc.text('Condición: CONTADO', right - doc.getTextWidth('Condición: CONTADO'), y + 16);
+
+    y += 22;
+
+    // Cliente
+    doc.setFillColor(245, 245, 245);
+    doc.rect(left, y, 180, 14, 'F');
+    doc.setDrawColor(220, 220, 220);
+    doc.rect(left, y, 180, 14, 'S');
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8);
+    doc.text('SEÑOR(ES) / RAZÓN SOCIAL:', left + 3, y + 5);
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(f.razon, left + 3, y + 11);
+    if(f.ruc) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100,100,100);
+      doc.text('RUC/CI: ' + f.ruc, right - doc.getTextWidth('RUC/CI: ' + f.ruc), y + 11);
+    }
+    y += 20;
+
+    // Tabla header
+    doc.setFillColor(17, 17, 24);
+    doc.rect(left, y, 180, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DESCRIPCIÓN', left + 3, y + 5.5);
+    doc.text('CANT', 130, y + 5.5);
+    doc.text('P.UNIT', 150, y + 5.5);
+    doc.text('TOTAL', right - 20, y + 5.5);
+    y += 8;
+
+    // Items
+    doc.setFont('helvetica', 'normal');
+    v.items.forEach((item, idx) => {
+      const bg = idx % 2 === 0 ? [255,255,255] : [248,248,252];
+      doc.setFillColor(...bg);
+      doc.rect(left, y, 180, 7, 'F');
+      doc.setDrawColor(230,230,230);
+      doc.line(left, y+7, right, y+7);
+      doc.setTextColor(20,20,20);
+      doc.setFontSize(9);
+      const nombre = item.nombre.length > 45 ? item.nombre.substring(0,45)+'...' : item.nombre;
+      doc.text(nombre, left + 3, y + 5);
+      doc.text(String(item.qty), 133, y + 5);
+      doc.text('G ' + fmtN(item.pventa), 148, y + 5);
+      const tot = 'G ' + fmtN(item.pventa * item.qty);
+      doc.text(tot, right - doc.getTextWidth(tot), y + 5);
+      y += 7;
+    });
+
+    y += 4;
+
+    // Totales
+    doc.setDrawColor(17,17,24);
+    doc.line(left, y, right, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.setTextColor(100,100,100);
+    doc.text('Subtotal:', 140, y);
+    doc.setTextColor(20,20,20);
+    doc.text('G ' + fmtN(v.total), right - doc.getTextWidth('G ' + fmtN(v.total)), y);
+    y += 6;
+    doc.setTextColor(100,100,100);
+    doc.text('IVA incluido (10%):', 140, y);
+    doc.setTextColor(200,100,0);
+    doc.text('G ' + fmtN(f.iva), right - doc.getTextWidth('G ' + fmtN(f.iva)), y);
+    y += 6;
+    doc.setTextColor(100,100,100);
+    doc.text('Monto gravado:', 140, y);
+    doc.setTextColor(0,150,80);
+    doc.text('G ' + fmtN(f.gravado), right - doc.getTextWidth('G ' + fmtN(f.gravado)), y);
+    y += 8;
+
+    // Total grande
+    doc.setFillColor(17,17,24);
+    doc.rect(130, y-4, 65, 12, 'F');
+    doc.setTextColor(0,255,136);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    const totalStr = 'TOTAL: G ' + fmtN(v.total);
+    doc.text(totalStr, right - doc.getTextWidth(totalStr), y + 5);
+
+  } else {
+    // TICKET
+    doc.setFillColor(0, 255, 136);
+    doc.rect(left, y - 6, 80, 10, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TICKET DE VENTA', left + 4, y);
+    doc.setTextColor(80,80,80);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('#' + v.num, right - doc.getTextWidth('#' + v.num), y - 2);
+    doc.text(new Date(v.fecha).toLocaleString('es-PY'), right - doc.getTextWidth(new Date(v.fecha).toLocaleString('es-PY')), y + 5);
+    y += 18;
+
+    // Items
+    doc.setFillColor(17,17,24);
+    doc.rect(left, y, 180, 8, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica','bold');
+    doc.text('PRODUCTO', left+3, y+5.5);
+    doc.text('CANT', 130, y+5.5);
+    doc.text('TOTAL', right-20, y+5.5);
+    y += 8;
+
+    doc.setFont('helvetica','normal');
+    v.items.forEach((item, idx) => {
+      const bg = idx%2===0 ? [255,255,255] : [248,248,252];
+      doc.setFillColor(...bg);
+      doc.rect(left, y, 180, 7, 'F');
+      doc.setDrawColor(230,230,230);
+      doc.line(left, y+7, right, y+7);
+      doc.setTextColor(20,20,20);
+      doc.setFontSize(9);
+      const nombre = item.nombre.length > 50 ? item.nombre.substring(0,50)+'...' : item.nombre;
+      doc.text(nombre, left+3, y+5);
+      doc.text(String(item.qty), 133, y+5);
+      const tot = 'G ' + fmtN(item.pventa*item.qty);
+      doc.text(tot, right-doc.getTextWidth(tot), y+5);
+      y += 7;
+    });
+
+    y += 6;
+    doc.setDrawColor(17,17,24);
+    doc.line(left, y, right, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.setTextColor(100,100,100);
+    doc.text('Medio de pago: ' + v.mp, left, y);
+    y += 8;
+    doc.setFillColor(17,17,24);
+    doc.rect(130, y-4, 65, 12, 'F');
+    doc.setTextColor(0,255,136);
+    doc.setFontSize(13);
+    doc.setFont('helvetica','bold');
+    const totalStr = 'TOTAL: G ' + fmtN(v.total);
+    doc.text(totalStr, right-doc.getTextWidth(totalStr), y+5);
+  }
+
+  // Footer
+  y += 20;
+  doc.setDrawColor(200,200,200);
+  doc.line(left, y, right, y);
+  y += 6;
+  doc.setTextColor(150,150,150);
+  doc.setFontSize(8);
+  doc.setFont('helvetica','normal');
+  doc.text(negocio + (DB.config.ruc?' · RUC: '+DB.config.ruc:'') + (DB.config.tel?' · '+DB.config.tel:''), mid, y, {align:'center'});
+  doc.text('¡Gracias por su compra!', mid, y+5, {align:'center'});
+
+  // Save
+  const nombre = v.tipo==='factura' ? 'Factura-'+v.factura.nro+'.pdf' : 'Ticket-'+v.num+'.pdf';
+  doc.save(nombre);
+  toast('PDF generado: ' + nombre);
+}
+
+function compartirWhatsApp() {
+  if(!lastVenta) return;
+  const v = lastVenta;
+  let texto = '';
+  const negocio = DB.config.negocio || 'CellPOS';
+  const tel = DB.config.tel || '';
+
+  if(v.tipo === 'factura' && v.factura) {
+    const f = v.factura;
+    const items = v.items.map(i => `  • ${i.nombre} x${i.qty} = ₲ ${fmtN(i.pventa*i.qty)}`).join('\n');
+    texto = `🧾 *FACTURA - ${negocio}*
+━━━━━━━━━━━━━━━━━━
+📄 Factura N°: ${f.nro}
+🏢 Timbrado: ${f.timbrado}
+📅 Fecha: ${f.fecha}
+━━━━━━━━━━━━━━━━━━
+👤 Cliente: ${f.razon}
+${f.ruc ? '🪪 RUC/CI: ' + f.ruc : ''}
+━━━━━━━━━━━━━━━━━━
+*DETALLE:*
+${items}
+━━━━━━━━━━━━━━━━━━
+💰 IVA (10%): ₲ ${fmtN(f.iva)}
+📊 Gravado: ₲ ${fmtN(f.gravado)}
+💵 *TOTAL: ₲ ${fmtN(v.total)}*
+━━━━━━━━━━━━━━━━━━
+${tel ? '📞 ' + tel : ''}
+¡Gracias por su compra! 🙏`;
+  } else {
+    const items = v.items.map(i => `  • ${i.nombre} x${i.qty} = ₲ ${fmtN(i.pventa*i.qty)}`).join('\n');
+    texto = `🎫 *TICKET - ${negocio}*
+━━━━━━━━━━━━━━━━━━
+🔢 Ticket N°: #${v.num}
+📅 ${new Date(v.fecha).toLocaleString('es-PY')}
+━━━━━━━━━━━━━━━━━━
+*DETALLE:*
+${items}
+━━━━━━━━━━━━━━━━━━
+💳 Pago: ${v.mp}
+💵 *TOTAL: ₲ ${fmtN(v.total)}*
+━━━━━━━━━━━━━━━━━━
+${tel ? '📞 ' + tel : ''}
+¡Gracias por su compra! 🙏`;
+  }
+
+  const url = 'https://wa.me/?text=' + encodeURIComponent(texto);
+  window.open(url, '_blank');
+}
+function imprimirComprobante() {
+  document.getElementById('pzone').innerHTML = comprobantePrintHTML;
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>document.getElementById('pzone').innerHTML='', 3000);
+  }, 200);
+}
+
+function buildFacturaHTML(v) {
+  const f = v.factura;
+  const rows = v.items.map(i=>`<tr><td style="padding:5px 4px">${i.nombre}</td><td style="padding:5px 4px;text-align:center">${i.qty}</td><td style="padding:5px 4px;text-align:right">&#8370; ${fmtN(i.pventa)}</td><td style="padding:5px 4px;text-align:right">&#8370; ${fmtN(i.pventa*i.qty)}</td></tr>`).join('');
+  return `<div style="font-family:Arial;font-size:12px;color:#111">
+    <div style="display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:15px;font-weight:800">${DB.config.negocio}</div>
+        <div style="font-size:11px;color:#555">RUC: ${DB.config.ruc||'—'}</div>
+        <div style="font-size:11px;color:#555">Timbrado N°: ${f.timbrado||'—'}</div>
+        ${DB.config.dir?`<div style="font-size:11px;color:#555">${DB.config.dir}</div>`:''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:700">FACTURA</div>
+        <div style="font-size:13px;font-weight:700;color:#333">${f.nro}</div>
+        <div style="font-size:11px;color:#555">Fecha: ${f.fecha}</div>
+        <div style="font-size:11px;color:#555">Condición: CONTADO</div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;padding:8px;background:#f9f9f9;border-radius:4px">
+      <div style="font-size:10px;color:#888;margin-bottom:2px">SEÑOR(ES) / RAZÓN SOCIAL:</div>
+      <div style="font-weight:700;font-size:13px">${f.razon}</div>
+      ${f.ruc?`<div style="font-size:11px;color:#555">RUC/CI: ${f.ruc}</div>`:''}
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+      <thead><tr style="background:#111;color:#fff">
+        <th style="padding:6px 4px;text-align:left;font-size:11px">Descripción</th>
+        <th style="padding:6px 4px;text-align:center;font-size:11px">Cant</th>
+        <th style="padding:6px 4px;text-align:right;font-size:11px">P.Unit</th>
+        <th style="padding:6px 4px;text-align:right;font-size:11px">Total</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="border-top:2px solid #111;padding-top:10px;text-align:right">
+      <div style="font-size:11px;color:#555">Subtotal: &#8370; ${fmtN(v.total)}</div>
+      <div style="font-size:11px;color:#888">IVA incluido (10%): &#8370; ${fmtN(f.iva)}</div>
+      <div style="font-size:11px;color:#888">Monto gravado: &#8370; ${fmtN(f.gravado)}</div>
+      <div style="font-size:17px;font-weight:800;margin-top:6px">TOTAL: &#8370; ${fmtN(v.total)}</div>
+    </div>
+    <div style="margin-top:12px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:8px">
+      ${DB.config.negocio} · ${DB.config.ruc?'RUC: '+DB.config.ruc+' ·':''} ${DB.config.tel||''}
+    </div>
+  </div>`;
+}
+
+function buildTicketHTML(v) {
+  const rows = v.items.map(i=>`<tr><td style="padding:3px 0">${i.nombre} x${i.qty}</td><td style="padding:3px 0;text-align:right">&#8370; ${fmtN(i.pventa*i.qty)}</td></tr>`).join('');
+  return `<div style="font-family:'Courier New',monospace;font-size:12px;color:#111;max-width:280px;margin:0 auto">
+    <div style="text-align:center;border-bottom:1px dashed #111;padding-bottom:8px;margin-bottom:8px">
+      <div style="font-size:15px;font-weight:800">${DB.config.negocio}</div>
+      ${DB.config.dir?`<div style="font-size:10px">${DB.config.dir}</div>`:''}
+      ${DB.config.tel?`<div style="font-size:10px">${DB.config.tel}</div>`:''}
+      <div style="font-size:11px;margin-top:4px">TICKET DE VENTA</div>
+    </div>
+    <div style="font-size:10px;margin-bottom:8px">Ticket: #${v.num}</div>
+    <div style="font-size:10px;margin-bottom:8px">${new Date(v.fecha).toLocaleString('es-PY')}</div>
+    <div style="border-bottom:1px dashed #111;margin-bottom:6px"></div>
+    <table style="width:100%;font-size:11px">${rows}</table>
+    <div style="border-top:1px dashed #111;margin-top:8px;padding-top:8px">
+      <div style="font-size:11px">Medio de pago: ${v.mp}</div>
+      <div style="font-size:15px;font-weight:800;margin-top:4px;text-align:right">TOTAL: &#8370; ${fmtN(v.total)}</div>
+    </div>
+    <div style="text-align:center;font-size:9px;color:#888;margin-top:10px;border-top:1px dashed #111;padding-top:6px">¡Gracias por su compra!</div>
+  </div>`;
+}
+
+function reimprimir(id) {
+  verComprobante(id);
+}
+
+// ===================== STOCK RENDER =====================
+function renderStock() {
+  const q=(document.getElementById('stock-search')?.value||'').toLowerCase();
+  let prods=DB.productos.filter(p=>!q||p.nombre.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q));
+  document.getElementById('stock-count').textContent=DB.productos.length+' productos';
+  const el=document.getElementById('stock-list');
+  if(!prods.length){el.innerHTML='<div style="text-align:center;padding:50px;color:var(--text3)">Sin productos'+(!q?'. Tocá + Nuevo para agregar':'')+'</div>';return;}
+  el.innerHTML=prods.map(p=>{
+    const color=CAT_C[p.categoria]||'#a0a0c0';
+    const sc=p.stock===0?'out':p.stock<=p.stockMin?'low':'ok';
+    return `<div class="stock-item">
+      <div class="si-top">
+        <div>
+          <div class="si-code">${p.codigo}</div>
+          <div class="si-name">${p.nombre}</div>
+        </div>
+        <span class="si-cat" style="background:${color}22;color:${color}">${p.categoria}</span>
+      </div>
+      <div class="si-bottom">
+        <div class="si-prices">Compra: ${fmtN(p.pcompra)} · Venta: <span>${fmtN(p.pventa)}</span></div>
+        <div class="si-stock ${sc}">${p.stock===0?'SIN STOCK':p.stock+' uds'}</div>
+      </div>
+      <div class="si-actions">
+        <button class="si-btn" onclick="editarProd(${p.id})">✏️ Editar</button>
+        <button class="si-btn" onclick="ajustarStock(${p.id})" style="color:var(--accent)">📦 Ajustar stock</button>
+        <button class="si-btn" onclick="eliminarProd(${p.id})" style="color:var(--red)">🗑 Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function ajustarStock(id) {
+  const p=DB.productos.find(x=>x.id===id);
+  if(!p) return;
+  const nuevo=prompt(`Stock actual de "${p.nombre}": ${p.stock}\n\nIngresá el nuevo stock:`);
+  if(nuevo===null) return;
+  const n=parseInt(nuevo);
+  if(isNaN(n)||n<0){toast('Valor inválido','err');return;}
+  p.stock=n; save(); renderStock(); renderProdList();
+  toast('Stock actualizado');
+}
+
+// ===================== VENTAS RENDER =====================
+function renderVentas() {
+  const q=(document.getElementById('ventas-search')?.value||'').toLowerCase();
+  let ventas=[...DB.ventas].reverse().filter(v=>!q||v.num.includes(q)||(v.factura?.razon||'').toLowerCase().includes(q));
+  const hoy=today();
+  const ventasHoy=DB.ventas.filter(v=>v.fecha.slice(0,10)===hoy&&!v.anulada);
+  const totalHoy=ventasHoy.reduce((a,v)=>a+v.total,0);
+  document.getElementById('ventas-hoy-info').textContent='Hoy: '+fmt(totalHoy);
+  const el=document.getElementById('v-list');
+  if(!ventas.length){el.innerHTML='<div style="text-align:center;padding:50px;color:var(--text3)">Sin ventas registradas</div>';return;}
+  el.innerHTML=ventas.map(v=>`
+    <div class="v-item">
+      <div class="v-top">
+        <span class="v-num">#${v.num}</span>
+        <span class="v-total">${fmt(v.total)}</span>
+      </div>
+      <div class="v-info">${v.factura?'🧾 '+v.factura.razon:'👤 Consumidor final'}</div>
+      <div class="v-meta">${new Date(v.fecha).toLocaleString('es-PY')} · ${v.items.length} item(s) · ${v.tipo==='factura'?'Factura':'Ticket'}</div>
+      <div class="v-bottom" style="flex-wrap:wrap;gap:6px">
+        <span class="v-mp">${v.mp}</span>
+        <button class="v-anular" onclick="reimprimir(${v.id})" style="color:var(--accent);border-color:var(--accent)">🖨 ${v.tipo==='factura'?'Factura':'Ticket'}</button>
+        ${v.anulada?'<span class="badge-anulada">ANULADA</span>':`<button class="v-anular" onclick="anularVenta(${v.id})">Anular</button>`}
+      </div>
+    </div>`).join('');
+}
+
+function anularVenta(id) {
+  if(!confirm('¿Anular esta venta? Se repone el stock.')) return;
+  const v=DB.ventas.find(x=>x.id===id);
+  if(!v||v.anulada) return;
+  v.anulada=true;
+  v.items.forEach(item=>{const p=DB.productos.find(x=>x.id===item.id);if(p)p.stock+=item.qty;});
+  save(); renderVentas(); toast('Venta anulada');
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  const h=new Date().getHours();
+  document.getElementById('dash-greet').textContent=(h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches')+' 👋';
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('es-PY',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const hoy=today();
+  const vh=DB.ventas.filter(v=>v.fecha.slice(0,10)===hoy&&!v.anulada);
+  const th=vh.reduce((a,v)=>a+v.total,0);
+  const gh=vh.reduce((a,v)=>a+v.items.reduce((s,i)=>s+(i.pventa-i.pcompra)*i.qty,0),0);
+  const alertas=DB.productos.filter(p=>p.stock<=p.stockMin);
+  document.getElementById('kpi-ventas').textContent=fmt(th);
+  document.getElementById('kpi-trans').textContent=vh.length+' transacciones';
+  document.getElementById('kpi-gan').textContent=fmt(gh);
+  document.getElementById('kpi-prods').textContent=DB.productos.length;
+  document.getElementById('kpi-alertas').textContent=alertas.length+' alertas';
+  document.getElementById('kpi-tickets').textContent=vh.length;
+  const conteo={};
+  vh.forEach(v=>v.items.forEach(i=>{conteo[i.nombre]=(conteo[i.nombre]||0)+i.qty;}));
+  const tops=Object.entries(conteo).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('top-prods').innerHTML=tops.length?tops.map(([n,q],i)=>`<div class="dp-item"><span class="dp-rank">${i+1}</span><span class="dp-name">${n}</span><span class="dp-qty">${q} uds</span></div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:12px 0">Sin ventas hoy</div>';
+  document.getElementById('alertas-list').innerHTML=alertas.length?alertas.slice(0,5).map(p=>`<div class="da-item"><div class="da-dot" style="background:${p.stock===0?'var(--red)':'var(--orange)'}"></div><span class="da-name">${p.nombre}</span><span class="da-stock" style="color:${p.stock===0?'var(--red)':'var(--orange)'}">${p.stock===0?'SIN STOCK':p.stock+' uds'}</span></div>`).join(''):'<div style="color:var(--green);font-size:13px;padding:12px 0">✅ Todo en orden</div>';
+}
+
+// ===================== CONFIG =====================
+function loadConfig() {
+  document.getElementById("c-timb-num").value=DB.timbrado.numero||"";
+  document.getElementById("c-timb-est").value=DB.timbrado.est||"001";
+  document.getElementById("c-timb-punto").value=DB.timbrado.punto||"001";
+  document.getElementById("c-timb-actual").value=DB.timbrado.actual||1;
+  // Show preview of next factura number
+  const prevEl = document.getElementById('timb-preview');
+  if(prevEl) {
+    const t = DB.timbrado;
+    prevEl.textContent = 'Próxima: ' + (t.est||'001')+'-'+(t.punto||'001')+'-'+String(t.actual||1).padStart(7,'0');
+  }
+  document.getElementById("c-timb-venc").value=DB.timbrado.vencimiento||"";
+  // Mostrar próxima factura
+  if(DB.timbrado.numero) {
+    const prox = (DB.timbrado.est||'001')+'-'+(DB.timbrado.punto||'001')+'-'+String(DB.timbrado.actual||1).padStart(7,'0');
+    const vence = DB.timbrado.vencimiento ? new Date(DB.timbrado.vencimiento) : null;
+    const vencido = vence && vence < new Date();
+    const el = document.getElementById('timb-status');
+    if(el) {
+      el.style.display='block';
+      el.style.background = vencido?'rgba(255,71,87,.1)':'rgba(0,255,136,.08)';
+      el.style.border = vencido?'1px solid rgba(255,71,87,.3)':'1px solid rgba(0,255,136,.2)';
+      el.style.color = vencido?'var(--red)':'var(--green)';
+      el.innerHTML = vencido
+        ? '⚠️ Timbrado VENCIDO el '+DB.timbrado.vencimiento
+        : '✅ Próxima factura: <strong>'+prox+'</strong>'+(DB.timbrado.vencimiento?' · Vence: '+DB.timbrado.vencimiento:'');
+    }
+  }
+  document.getElementById('c-neg').value=DB.config.negocio||'';
+  document.getElementById('c-ruc').value=DB.config.ruc||'';
+  document.getElementById('c-dir').value=DB.config.dir||'';
+  document.getElementById('c-tel').value=DB.config.tel||'';
+}
+function guardarConfig() {
+  DB.config={negocio:document.getElementById('c-neg').value||'CellPOS',ruc:document.getElementById('c-ruc').value,dir:document.getElementById('c-dir').value,tel:document.getElementById('c-tel').value};
+  // Guardar timbrado — permite cambiar el número para nuevo talonario
+  const nuevoNum = parseInt(document.getElementById('c-timb-actual').value) || DB.timbrado.actual || 1;
+  DB.timbrado = {
+    numero: document.getElementById('c-timb-num').value.trim(),
+    est: document.getElementById('c-timb-est').value.trim()||'001',
+    punto: document.getElementById('c-timb-punto').value.trim()||'001',
+    actual: nuevoNum,
+    vencimiento: document.getElementById('c-timb-venc').value
+  };
+  save(); closeModal('modal-config');
+  // Mostrar próxima factura
+  const prox = DB.timbrado.est+'-'+DB.timbrado.punto+'-'+String(DB.timbrado.actual).padStart(7,'0');
+  toast('Guardado · Próxima factura: '+prox);
+}
+
+// ===================== CIERRE TURNO =====================
+function cerrarTurno() {
+  const hoy=today();
+  const vh=DB.ventas.filter(v=>v.fecha.slice(0,10)===hoy&&!v.anulada);
+  const th=vh.reduce((a,v)=>a+v.total,0);
+  const porMP={};
+  vh.forEach(v=>{porMP[v.mp]=(porMP[v.mp]||0)+v.total;});
+  const mpRows=Object.entries(porMP).map(([mp,m])=>`<div class="s-row"><span class="s-label">${mp}</span><span class="s-val">${fmt(m)}</span></div>`).join('');
+  document.getElementById('cierre-content').innerHTML=`
+    <div class="s-detail">
+      <div class="s-row"><span class="s-label">Fecha</span><span class="s-val">${hoy}</span></div>
+      <div class="s-row"><span class="s-label">Total ventas</span><span class="s-val">${vh.length}</span></div>
+      <div class="s-row total"><span class="s-label">TOTAL VENDIDO</span><span class="s-val">${fmt(th)}</span></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin:10px 0 6px">Por medio de pago:</div>
+    <div class="s-detail">${mpRows||'<div style="color:var(--text3);font-size:13px">Sin ventas hoy</div>'}</div>`;
+  openModal('modal-cierre');
+}
+
+function imprimirCierre() {
+  const c=document.getElementById('cierre-content').innerHTML;
+  document.getElementById('pzone').innerHTML=`<div style="font-family:Arial;font-size:13px;color:#111;padding:20px;background:white"><h2>${DB.config.negocio} — Cierre de turno</h2><br>${c}</div>`;
+  window.print();
+  setTimeout(()=>{document.getElementById('pzone').innerHTML='';closeModal('modal-cierre');},1000);
+}
+
+// ===================== TOPBAR TIME =====================
+function updateTime() {
+  const now=new Date();
+  const timeStr=now.toLocaleTimeString('es-PY',{hour:'2-digit',minute:'2-digit'})+' · '+now.toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit'});
+  const el1=document.getElementById('turno-hora');
+  const el2=document.getElementById('turno-hora2');
+  if(el1) el1.textContent=timeStr;
+  if(el2) el2.textContent=timeStr;
+}
+
+
+function imprimirStock() {
+  const rows = DB.productos.map(p => {
+    const sc = p.stock===0?'color:#ff4757':p.stock<=p.stockMin?'color:#ff9f43':'color:#00ff88';
+    return `<tr>
+      <td style="padding:6px 8px;font-family:monospace;font-size:11px">${p.codigo}</td>
+      <td style="padding:6px 8px;font-weight:600">${p.nombre}</td>
+      <td style="padding:6px 8px">${p.categoria}</td>
+      <td style="padding:6px 8px;text-align:right">₲ ${fmtN(p.pcompra)}</td>
+      <td style="padding:6px 8px;text-align:right;font-weight:600">₲ ${fmtN(p.pventa)}</td>
+      <td style="padding:6px 8px;text-align:center;font-weight:700;${sc}">${p.stock}</td>
+      <td style="padding:6px 8px;text-align:center;color:#888">${p.stockMin}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('pzone').innerHTML = `<div style="font-family:Arial;font-size:12px;color:#111;padding:20px;background:white">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px">
+      <div>
+        <div style="font-size:18px;font-weight:800">${DB.config.negocio}</div>
+        ${DB.config.ruc?`<div style="font-size:11px;color:#555">RUC: ${DB.config.ruc}</div>`:''}
+      </div>
+      <div style="text-align:right;font-size:11px;color:#555">
+        <div><strong>INVENTARIO</strong></div>
+        <div>${new Date().toLocaleString('es-PY')}</div>
+        <div>${DB.productos.length} productos</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:#111;color:#fff">
+          <th style="padding:7px 8px;text-align:left;font-size:11px">Código</th>
+          <th style="padding:7px 8px;text-align:left;font-size:11px">Producto</th>
+          <th style="padding:7px 8px;text-align:left;font-size:11px">Categoría</th>
+          <th style="padding:7px 8px;text-align:right;font-size:11px">P.Compra</th>
+          <th style="padding:7px 8px;text-align:right;font-size:11px">P.Venta</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px">Stock</th>
+          <th style="padding:7px 8px;text-align:center;font-size:11px">Mín.</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:14px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:8px">
+      ${DB.config.negocio} · Impreso: ${new Date().toLocaleString('es-PY')}
+    </div>
+  </div>`;
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>document.getElementById('pzone').innerHTML='', 3000);
+  }, 200);
+}
+
+// ===================== INIT =====================
+load();
+renderProdList();
+updateCats();
+updateTime();
+setInterval(updateTime,30000);
+document.getElementById('t-num').textContent='#'+String(DB.ticketNum).padStart(4,'0');
+</script>
+</body>
+</html>
